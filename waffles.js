@@ -162,5 +162,3 @@ function processCommand(receivedMessage) {
 
 
 client.login(token)
-
-
