@@ -6,7 +6,7 @@ const tz = require("moment-timezone")
 // constants
 const client = new Discord.Client()
 const serverTime = moment().tz("America/Los_Angeles")
-const updateTime = "" // update on user input needed to initialize
+const updateTime = moment().tz("America/Los_Angeles") // update on user input needed
 const nbTime1 = updateTime.add(7270*1,"seconds").calendar()
 const nbTime2 = updateTime.add(7270*2,"seconds").calendar()
 const nbTime3 = updateTime.add(7270*3,"seconds").calendar()
@@ -23,6 +23,11 @@ client.on('ready', () => {
             console.log(` -- ${channel.name} (${channel.type}) - ${channel.id}`)
         })
     })
+
+    // auto updates to updateTime based on nbTime1
+    if (serverTime.isAfter(nbTime1)) {
+        updateTime.push(nbTime1)
+    }
 
     // Sending Message to a channel
     var generalChannel = client.channels.get("667117820043198465") // Replace with known channel ID
@@ -61,7 +66,7 @@ function processCommand(receivedMessage) {
     
     // print nanban times
     else if (primaryCommand == "nb") {
-        printCommand(receivedMessage)
+        printCommand(receivedMessage, serverTime, updateTime, nbTime1, nbTime2, nbTime3)
     } 
     
     // set updateTime
@@ -71,12 +76,12 @@ function processCommand(receivedMessage) {
 
     // add time
     else if (primaryCommand =="ct+") {
-        addTime(arguments, receivedMessage)
+        addTime(newTime, arguments, receivedMessage, updateTime, nbTime1, nbTime2, nbTime3)
     } 
 
     // subtract time
     else if (primaryCommand =="ct-") {
-        subtractTime(arguments, receivedMessage)
+        subtractTime(newTime, arguments, receivedMessage, updateTime, nbTime1, nbTime2, nbTime3)
     } 
     
     // error message
@@ -93,36 +98,18 @@ function helpCommand(receivedMessage) {
 }
 
 // print Nanban Times
-function printCommand(receivedMessage) {
-
-
-    // BELOW IS PROBLEMATIC
-    // IT NEEDS TO BE RUN SERVERSIDE CONSTANTLY
-    // HOW DO I DO THIS?
-    if (serverTime.isAfter(nbTime1)) {
-        updateTime.push(nbTime1)
-        receivedMessage.channel.send(
-            "Nanban Time has been updated to current time!"
-        )
-    }
-    // -------------------------
-
-    // reply
-    else {
-        receivedMessage.channel.send(
-            "Server Time: " + serverTime.format('MMMM Do YYYY, h:mm:ss a')
-        )
-        receivedMessage.channel.send(
-            "Nanban Time: " + updateTime.format('MMMM Do YYYY, h:mm:ss a')
-        )
-        receivedMessage.channel.send(
-            "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
-        )
-    }
+function printCommand(receivedMessage, serverTime, updateTime, nbTime1, nbTime2, nbTime3) {
+    receivedMessage.channel.send(
+        "Server Time: " + serverTime.format('MMMM Do YYYY, h:mm:ss a') +
+        "\n" +
+        "Nanban Time: " + updateTime.format('MMMM Do YYYY, h:mm:ss a') +
+        "\n" +
+        "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
+    )
 }
 
 // set updateTime to current time
-function setTime(receivedMessage) {
+function setTime(receivedMessage, updateTime, serverTime) {
     updateTime.push(serverTime)
     receivedMessage.channel.send(
         "Nanban Time updated to: " + updateTime.format('MMMM Do YYYY, h:mm:ss a')
@@ -130,17 +117,27 @@ function setTime(receivedMessage) {
 }
 
 // add minutes to updateTime
-function addTime(argument, receivedMessage) {
-    updateTime.add(argument, "minutes").calendar()
+function addTime(newTime, arguments, receivedMessage, updateTime, nbTime1, nbTime2, nbTime3) {
+    let newTime = updateTime.add(arguments, "minutes").calendar()
+    updateTime.push(newTime)
 
-
-
-    const nbTime1 = updateTime.add(7270*1,"seconds").calendar()
+    receivedMessage.channel.send(
+        "New Nanban time: " + updateTime +
+        "\n" +
+        "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
+    )
 }
 
 // subtract minutes from updateTime
-function subtractTime(receivedMessage) {
+function subtractTime(newTime, arguments, receivedMessage, updateTime, nbTime1, nbTime2, nbTime3) {
+    let newTime = updateTime.subtract(arguments, "minutes").calendar()
+    updateTime.push(newTime)
 
+    receivedMessage.channel.send(
+        "New Nanban time: " + updateTime +
+        "\n" +
+        "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
+    )
 }
 
 
