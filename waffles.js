@@ -2,16 +2,28 @@
 const Discord = require('discord.js')
 const moment = require('moment')
 const tz = require("moment-timezone")
+const express = require("express");
+
+
+// Discord token cdm
 const { token } = require('./config.json');
 
 
-// constants
+// create discord client
 const client = new Discord.Client()
-let serverTime = moment().tz("America/Los_Angeles")
-let updateTime = "" // update on user input needed
-// let nbTime1 = updateTime.add(7270*1,"seconds").calendar()
-// let nbTime2 = updateTime.add(7270*2,"seconds").calendar()
-// let nbTime3 = updateTime.add(7270*3,"seconds").calendar()
+
+// Tells node that we are creating an "express" server
+var app = express();
+
+// Sets up the Express app to handle data parsing
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+require("./routes/wafflesRoutes")(app);
+
+// let nbTime1 = moment(data.updateTime).add(7270,"seconds").calendar()
+// let nbTime2 = moment(data.updateTime).add(7270*3,"seconds").calendar()
+// let nbTime3 = moment(data.updateTime).add(7270*3,"seconds").calendar()
 
 
 // on start notification
@@ -52,7 +64,7 @@ client.on('message', (receivedMessage) => {
     }
 })
 
-// response
+// process receivedMessage
 function processCommand(receivedMessage) {
     let fullCommand = receivedMessage.content.substr(2) // Remove "!@""
     let splitCommand = fullCommand.split(" ") // Split the message up in to pieces for each space
@@ -95,59 +107,63 @@ function processCommand(receivedMessage) {
 
 
 // --------------------------------------------------------------------------------------
-// // print !@help
-// function helpCommand(receivedMessage) {
-//      receivedMessage.channel.send(
-//          "Waffles only knows Server Time!\n!@nb : Find Nanban Times\n!@ut : Update Nanban Time to current time\n!@ct+ XX : add XX minutes\n!@ct- XX : subtract XX minutes" 
-//      )
-// }
+// print !@help
+function helpCommand(receivedMessage) {
+     receivedMessage.channel.send(
+         "Waffles only knows Server Time!\n!@nb : Find Nanban Times\n!@ut : Update Nanban Time to current time\n!@ct+ XX : add XX minutes\n!@ct- XX : subtract XX minutes" 
+     )
+}
 
-// // print Nanban Times
-// function printCommand(receivedMessage) {
+// print Nanban Times
+function printCommand(receivedMessage) {
 
-//     receivedMessage.channel.send(
-//         "Server Time: " + serverTime.format('MMMM Do YYYY, h:mm:ss a') +
-//         "\n" +
-//         "Nanban Time: " + updateTime.format('MMMM Do YYYY, h:mm:ss a') +
-//         "\n" +
-//         "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a')
-//         //  + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
-//     )
-// }
+    receivedMessage.channel.send(
+        "Server Time: " + data.serverTime.format('MMMM Do YYYY, h:mm:ss a') +
+        "\n" +
+        "Nanban Time: " + data.updateTime.format('MMMM Do YYYY, h:mm:ss a') +
+        "\n" +
+        "Next Nanban Time: " + nbTime1 + " => " + nbTime2 + " => " + nbTime3
+    )
+}
 
-// // set updateTime to current time
-// function setTime(receivedMessage) {
-//     updateTime.push(serverTime)
-//     receivedMessage.channel.send(
-//         "Nanban Time updated to: " + updateTime.format('MMMM Do YYYY, h:mm:ss a')
-//     )
-// }
+// set updateTime to current time
+function setTime(receivedMessage) {
+    updateSetTime()
+    let newTime = data.serverTime
+    data.updateTime.push(newTime)
+    receivedMessage.channel.send(
+        "Nanban Time updated to: " + data.updateTime.format('MMMM Do YYYY, h:mm:ss a')
+    )
+}
 
-// // add minutes to updateTime
-// function addTime(arguments, receivedMessage) {
-//     let newTime = updateTime.add(arguments, "minutes").calendar()
-//     updateTime.push(newTime)
+// function to change updateTime to serverTime
+function updateSetTime() {
+    
+}
 
-//     receivedMessage.channel.send(
-//         "New Nanban time: " + updateTime +
-//         "\n" +
-//         "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a')
-//         //  + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
-//     )
-// }
+// add minutes to updateTime
+function addTime(arguments, receivedMessage) {
+    let newTime = data.updateTime.add(arguments, "minutes").calendar()
+    data.updateTime.push(newTime)
 
-// // subtract minutes from updateTime
-// function subtractTime(arguments, receivedMessage) {
-//     let newTime = updateTime.subtract(arguments, "minutes").calendar()
-//     updateTime.push(newTime)
+    receivedMessage.channel.send(
+        "New Nanban time: " + data.updateTime +
+        "\n" +
+        "Next Nanban Time: " + nbTime1 + " => " + nbTime2 + " => " + nbTime3
+    )
+}
 
-//     receivedMessage.channel.send(
-//         "New Nanban time: " + updateTime +
-//         "\n" +
-//         "Next Nanban Time: " + nbTime1.format('MMMM Do YYYY, h:mm:ss a')
-//         //  + " => " + nbTime2.format('MMMM Do YYYY, h:mm:ss a') + " => " + nbTime3.format('MMMM Do YYYY, h:mm:ss a')
-//     )
-// }
+// subtract minutes from updateTime
+function subtractTime(arguments, receivedMessage) {
+    let newTime = updateTime.subtract(arguments, "minutes").calendar()
+    data.updateTime.push(newTime)
+
+    receivedMessage.channel.send(
+        "New Nanban time: " + updateTime +
+        "\n" +
+        "Next Nanban Time: " + nbTime1 + " => " + nbTime2 + " => " + nbTime3
+    )
+}
 
 // ---------------------------------------------------------------------------------------
 
