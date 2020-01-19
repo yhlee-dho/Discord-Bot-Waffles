@@ -165,8 +165,8 @@ function setTimeCommand(arguments, message) {
         .setAuthor("Waffles is updating Nanban Time!")
         .setDescription("This updates the stored Nanban time to current time")
         .setColor("#9859B6")
-        .addField("Updated Nanban Time: ", updateTime)
-        .addField("Next Nanban Time: ", nbTime)
+        .addField("Updated Nanban Time: ", nbTimer.updateTime)
+        .addField("Next Nanban Time: ", nbTimer.nbTime)
     message.channel.send({embed: embed})   
 
 }
@@ -180,8 +180,8 @@ function addTimeCommand(arguments, message) {
         .setAuthor("Waffles is fiddeling with the fabric of time!")
         .setDescription(`This adds ${alterTime} minutes to the stored Nanban Time`)
         .setColor("#9859B6")
-        .addField("Updated Nanban Time: ", updateTime)
-        .addField("Next Nanban Time: ", nbTime)
+        .addField("Updated Nanban Time: ", nbTimer.updateTime)
+        .addField("Next Nanban Time: ", nbTimer.nbTime)
     message.channel.send({embed: embed})   
 
 }
@@ -195,8 +195,8 @@ function subtractTimeCommand(arguments, message) {
         .setAuthor("Waffles is fiddeling with the fabric of time!")
         .setDescription(`This subtracts ${alterTime} minutes to the stored Nanban Time`)
         .setColor("#9859B6")
-        .addField("Updated Nanban Time: ", updateTime)
-        .addField("Next Nanban Time: ", nbTime)
+        .addField("Updated Nanban Time: ", nbTimer.updateTime)
+        .addField("Next Nanban Time: ", nbTimer.nbTime)
     message.channel.send({embed: embed}) 
 
 }
