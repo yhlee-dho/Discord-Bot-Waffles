@@ -1,0 +1,2 @@
+nodemon waffles.js
+pause

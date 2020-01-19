@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/yhlee-dho/Discord-Bot-Waffles.git"
   },
-  "author": "",
+  "author": "YongLee",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/yhlee-dho/Discord-Bot-Waffles/issues"
@@ -20,6 +20,7 @@
     "discord.js": "^11.5.1",
     "jest": "^24.9.0",
     "moment": "^2.24.0",
-    "moment-timezone": "^0.5.27"
+    "moment-timezone": "^0.5.27",
+    "snekfetch": "^4.0.4"
   }
 }

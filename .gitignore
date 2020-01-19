@@ -1,5 +1,6 @@
-# Config Files
+# JSON Files
 config.json
+nodemon.json
 
 # Logs
 logs

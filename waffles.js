@@ -1,36 +1,37 @@
-// npm require
-const Discord = require('discord.js')
-const moment = require('moment')
-const tz = require("moment-timezone")
-const express = require("express");
+// requirements
+const { token } = require("./config.json")
+const { prefix } = require("./config.json")
+const Discord = require("discord.js")
+const fs = require("fs")
+
+const moment = require('moment-timezone')
+
+const nbTimer = require("./data/nbTimer")
+const snekfetch = require("snekfetch");
 
 
-// Discord token cdm
-const { token } = require('./config.json');
+// -------------------------------------------------------------------------------------------------
+//                                       CLIENT
+// -------------------------------------------------------------------------------------------------
 
+// const bot = new Discord.Client({disableEveryone: true})
+const bot = new Discord.Client()
 
-// create discord client
-const client = new Discord.Client()
-
-// Tells node that we are creating an "express" server
-var app = express();
-
-// Sets up the Express app to handle data parsing
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-require("./routes/wafflesRoutes")(app);
-
-// let nbTime1 = moment(data.updateTime).add(7270,"seconds").calendar()
-// let nbTime2 = moment(data.updateTime).add(7270*3,"seconds").calendar()
-// let nbTime3 = moment(data.updateTime).add(7270*3,"seconds").calendar()
-
-
-// on start notification
-client.on('ready', () => {
+// client on ready function
+bot.on('ready', () => {
     // List servers the bot is connected to
     console.log("Servers:")
-    client.guilds.forEach((guild) => {
+    // console.log(bot.commands)
+
+    // generate invite
+    bot.generateInvite(["ADMINISTRATOR"]).then(link => {
+        console.log(link)
+    }).catch(err => {
+        console.log(err.stack)
+    })
+
+
+    bot.guilds.forEach((guild) => {
         console.log(" - " + guild.name)
 
         // List all channels
@@ -39,34 +40,48 @@ client.on('ready', () => {
         })
     })
 
-    // // auto updates to updateTime based on nbTime1
-    // if (serverTime.isAfter(nbTime1)) {
-    //     updateTime.push(nbTime1)
-    // }
+    // target channel
+    let botChannel = bot.channels.get("667117820043198465")
 
-    // Sending Message to a channel
-    var generalChannel = client.channels.get("667117820043198465") // Replace with known channel ID
-    generalChannel.send("Meow!")
+    let embed = new Discord.RichEmbed()
+        .setAuthor("Meow!")
+        .setDescription("Waffles is now awake!")
+        .setColor("#9859B6")
+        .addField("Bot Server Time: ", moment().format('MMMM Do YYYY, h:mm:ss a'))
+        .addField("PST: ", moment().tz("America/Los_Angeles").format('MMMM Do YYYY, h:mm:ss a'))
+        .addField("PST + 7270 Seconds: ", moment().tz("America/Los_Angeles").add(7270,"seconds").format('MMMM Do YYYY, h:mm:ss a'))
+    botChannel.send({embed: embed})
 
 })
 
 // Replying to a command
-client.on('message', (receivedMessage) => {
+bot.on('message', async message => {
+    if (message.author.bot) return
+    if (message.channel.type === "dm") return
+    
+    // let messageArray = message.content.split(/\s+/g)
+    // let command = messageArray[0]
+    // let args = messageArray.slice[1]
 
-    // Prevent bot from responding to its own messages
-    if (receivedMessage.author == client.user) {
+    // if(!command.startsWith(prefix)) return
+
+    // let cmd = bot.commands.get(command.slice(prefix.length))
+    // if(cmd) cmd.run(bot, message, args);
+
+
+    if (message.content.startsWith(prefix)) {
+        wafflesCommand(message)
         return
     }
-
-    // listen for commands
-    if (receivedMessage.content.startsWith("!@")) {
-        processCommand(receivedMessage)
-    }
 })
+ 
+// -------------------------------------------------------------------------------------------------
+//                                       LISTENER
+// -------------------------------------------------------------------------------------------------
 
-// process receivedMessage
-function processCommand(receivedMessage) {
-    let fullCommand = receivedMessage.content.substr(2) // Remove "!@""
+// process message
+function wafflesCommand(message) {
+    let fullCommand = message.content.substr(2) // Remove "!@"
     let splitCommand = fullCommand.split(" ") // Split the message up in to pieces for each space
     let primaryCommand = splitCommand[0] // The first word directly after !@ is the command
     let arguments = splitCommand.slice(1) // All other words are arguments/parameters/options for the command
@@ -74,107 +89,346 @@ function processCommand(receivedMessage) {
     console.log("Command received: " + primaryCommand)
     console.log("Arguments: " + arguments) // There may not be any arguments
 
-    // toggle help .
+    // toggle help
     if (primaryCommand == "help") {
-        helpCommand(receivedMessage)
+        helpCommand(message)
     } 
     
     // print nanban times
     else if (primaryCommand == "nb") {
-        printCommand(receivedMessage)
+        nbTimeCommand(arguments, message)
     } 
     
     // set updateTime
     else if (primaryCommand =="ut") {
-        setTime(arguments, receivedMessage)
+        setTimeCommand(arguments, message)
     } 
 
     // add time
-    else if (primaryCommand =="ct+") {
-        addTime(arguments, receivedMessage)
+    else if (primaryCommand =="ut+") {
+        addTimeCommand(arguments, message)
     } 
 
     // subtract time
-    else if (primaryCommand =="ct-") {
-        subtractTime(arguments, receivedMessage)
+    else if (primaryCommand =="ut-") {
+        subtractTimeCommand(arguments, message)
     } 
     
     // error message
     else {
-        receivedMessage.channel.send("I don't understand the command. Try `!@help`")
+        message.channel.send("Waffles does not understand! Try `!@help`")
     }
 }
 
+// -------------------------------------------------------------------------------------------------
+//                                       PROCESS FUNCTIONS
+// -------------------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------------
 // print !@help
-function helpCommand(receivedMessage) {
-     receivedMessage.channel.send(
-         "Waffles only knows Server Time!\n!@nb : Find Nanban Times\n!@ut : Update Nanban Time to current time\n!@ct+ XX : add XX minutes\n!@ct- XX : subtract XX minutes" 
-     )
+function helpCommand(message) {
+    //  message.channel.send(
+    //      !@ct+ XX : add XX minutes\n!@ct- XX : subtract XX minutes" 
+    //  )
+
+     let embed = new Discord.RichEmbed()
+        .setAuthor(message.author.username)
+        .setDescription("Waffles only knows Server Time!")
+        .setColor("#9859B6")
+        .addField("!@nb : ", "Find Nanban Times")
+        .addField("!@ut : ", "Update Nanban Time to current time")
+        .addField("!@ut+ XX : ", "add XX minutes fron Nanban Time")
+        .addField("!@ut- XX : ", "subtract XX minutes from Nanban Time")
+    message.channel.send({embed: embed})
 }
 
-// print Nanban Times
-function printCommand(receivedMessage) {
+// print nanban times
+function nbTimeCommand(arguments, message) {
 
-    receivedMessage.channel.send(
-        "Server Time: " + data.serverTime.format('MMMM Do YYYY, h:mm:ss a') +
-        "\n" +
-        "Nanban Time: " + data.updateTime.format('MMMM Do YYYY, h:mm:ss a') +
-        "\n" +
-        "Next Nanban Time: " + nbTime1 + " => " + nbTime2 + " => " + nbTime3
-    )
+
+    let embed = new Discord.RichEmbed()
+        .setAuthor("Waffles looks deep into the Nanban")
+        .setDescription("Waffles only knows Server Time!")
+        .setColor("#9859B6")
+        .addField("Server Time: ", nbTimer.serverTime)
+        .addField("Updated Nanban Time: ", nbTimer.updateTime)
+        .addField("Next Nanban Time: ", nbTimer.nbTime) 
+    message.channel.send({embed: embed})
+
 }
 
-// set updateTime to current time
-function setTime(receivedMessage) {
-    updateSetTime()
-    let newTime = data.serverTime
-    data.updateTime.push(newTime)
-    receivedMessage.channel.send(
-        "Nanban Time updated to: " + data.updateTime.format('MMMM Do YYYY, h:mm:ss a')
-    )
+// set updateTime
+function setTimeCommand(arguments, message) {
+
+
+
+    let embed = new Discord.RichEmbed()
+        .setAuthor("Waffles is updating Nanban Time!")
+        .setDescription("This updates the stored Nanban time to current time")
+        .setColor("#9859B6")
+        .addField("Updated Nanban Time: ", updateTime)
+        .addField("Next Nanban Time: ", nbTime)
+    message.channel.send({embed: embed})   
+
 }
 
-// function to change updateTime to serverTime
-function updateSetTime() {
+// add time
+function addTimeCommand(arguments, message) {
+
+
+    let alterTime = arguments
+    let embed = new Discord.RichEmbed()
+        .setAuthor("Waffles is fiddeling with the fabric of time!")
+        .setDescription(`This adds ${alterTime} minutes to the stored Nanban Time`)
+        .setColor("#9859B6")
+        .addField("Updated Nanban Time: ", updateTime)
+        .addField("Next Nanban Time: ", nbTime)
+    message.channel.send({embed: embed})   
+
+}
+
+// subtract time
+function subtractTimeCommand(arguments, message) {
+
+
+    let alterTime = arguments
+    let embed = new Discord.RichEmbed()
+        .setAuthor("Waffles is fiddeling with the fabric of time!")
+        .setDescription(`This subtracts ${alterTime} minutes to the stored Nanban Time`)
+        .setColor("#9859B6")
+        .addField("Updated Nanban Time: ", updateTime)
+        .addField("Next Nanban Time: ", nbTime)
+    message.channel.send({embed: embed}) 
+
+}
+
+
+
+
+bot.login(token)
+
+// -------------------------------------------------------------------------------------------------
+//                                       SAMPLE CODE
+// -------------------------------------------------------------------------------------------------
+
+// let embed = new Discord.RichEmbed()
+//     .setAuthor(message.author.username)
+//     .setDescription("This is the Description!")
+//     .setColor("#9859B6")
+//     .addField("ID", message.author.id)
+//     .addField("Created At", message.author.createdAt)
+// botChannel.send({embed: embed})
+
+
+// -------------------------------------------------------------------------------------------------
+//                                       PREVIOUS CODE
+// -------------------------------------------------------------------------------------------------
+
+// // npm require
+// const Discord = require("discord.js")
+// const moment = require('moment')
+// const tz = require("moment-timezone")
+// const snekfetch = require("snekfetch");
+
+// const nbTimer = require("./data/nbTimer")
+
+
+// // Discord token cdm
+// const { token } = require('./config.json');
+
+// // create discord client
+// const client = new Discord.Client()
+
+// // let nbTime1 = moment(data.updateTime).add(7270,"seconds").calendar()
+// // let nbTime2 = moment(data.updateTime).add(7270*3,"seconds").calendar()
+// // let nbTime3 = moment(data.updateTime).add(7270*3,"seconds").calendar()
+
+// // on start notification
+// client.on('ready', () => {
+//     // List servers the bot is connected to
+//     console.log("Servers:")
+//     client.guilds.forEach((guild) => {
+//         console.log(" - " + guild.name)
+
+//         // List all channels
+//         guild.channels.forEach((channel) => {
+//             console.log(` -- ${channel.name} (${channel.type}) - ${channel.id}`)
+//         })
+//     })
+
+//     // // auto updates to updateTime based on nbTime1
+//     // if (serverTime.isAfter(nbTime1)) {
+//     //     updateTime.push(nbTime1)
+//     // }
+
+//     // Sending Message to a channel
+//     var botChannel = client.channels.get("667117820043198465") // Replace with known channel ID
+//     botChannel.send("Meow!")
+
+// })
+
+// // Replying to a command
+// client.on('message', (message) => {
+
+//     // Prevent bot from responding to its own messages
+//     if (message.author == client.user) {
+//         return
+//     }
+
+//     // listen for commands
+//     if (message.content.startsWith("!@")) {
+//         processCommand(message)
+//     }
+// })
+
+// // process message
+// function processCommand(message) {
+//     let fullCommand = message.content.substr(2) // Remove "!@""
+//     let splitCommand = fullCommand.split(" ") // Split the message up in to pieces for each space
+//     let primaryCommand = splitCommand[0] // The first word directly after !@ is the command
+//     let arguments = splitCommand.slice(1) // All other words are arguments/parameters/options for the command
+
+//     console.log("Command received: " + primaryCommand)
+//     console.log("Arguments: " + arguments) // There may not be any arguments
+
+//     // toggle help .
+//     if (primaryCommand == "help") {
+//         helpCommand(message)
+//     } 
     
-}
+//     // print nanban times
+//     else if (primaryCommand == "nb") {
+//         printCommand(arguments, message)
+//     } 
+    
+//     // set updateTime
+//     else if (primaryCommand =="ut") {
+//         setTime(arguments, message)
+//     } 
 
-// add minutes to updateTime
-function addTime(arguments, receivedMessage) {
-    let newTime = data.updateTime.add(arguments, "minutes").calendar()
-    data.updateTime.push(newTime)
+//     // add time
+//     else if (primaryCommand =="ct+") {
+//         addTime(arguments, message)
+//     } 
 
-    receivedMessage.channel.send(
-        "New Nanban time: " + data.updateTime +
-        "\n" +
-        "Next Nanban Time: " + nbTime1 + " => " + nbTime2 + " => " + nbTime3
-    )
-}
-
-// subtract minutes from updateTime
-function subtractTime(arguments, receivedMessage) {
-    let newTime = updateTime.subtract(arguments, "minutes").calendar()
-    data.updateTime.push(newTime)
-
-    receivedMessage.channel.send(
-        "New Nanban time: " + updateTime +
-        "\n" +
-        "Next Nanban Time: " + nbTime1 + " => " + nbTime2 + " => " + nbTime3
-    )
-}
-
-// ---------------------------------------------------------------------------------------
+//     // subtract time
+//     else if (primaryCommand =="ct-") {
+//         subtractTime(arguments, message)
+//     } 
+    
+//     // error message
+//     else {
+//         message.channel.send("I don't understand the command. Try `!@help`")
+//     }
+// }
 
 
+// // --------------------------------------------------------------------------------------
+// // print !@help
+// function helpCommand(message) {
+//      message.channel.send(
+//          "Waffles only knows Server Time!\n!@nb : Find Nanban Times\n!@ut : Update Nanban Time to current time\n!@ct+ XX : add XX minutes\n!@ct- XX : subtract XX minutes" 
+//      )
+// }
+
+// // print Nanban Times
+// function printCommand(message) {
+//     // get nbTimer data
+//     snekfetch.get(nbTimer).then( r => {
+//         // console.log(r.body)
+
+//         let id = Number(args[0]);
+//         let body = r.body;
+//         let serverTime = r.serverTime;
+//         let updateTime = r.updateTime;
+//         let nbTime = r.nbTimer;
+        
+//         // make sure the db is present
+//         // error handeling
+//         if(!id) return message.channel.send("DB not found!")
+//         if(isNaN(id)) return message.channel.send("Something is wrong with the DB!");
+
+//         let entry = body.find(post => post.id === id);
+//         // console.log(entry);
+//         if(!entry) return message.channel.send("This entry does not exist!");
+
+//         let embed = new Discord.RichEmbed()
+//             .setAuthor(entry.title)
+//             .setDescription(entry.body)
+//             .addField("Author ID", entry.userId)
+//             .setFooter("Post Id: " + entry.id);
+
+//         message.channel.send({embed: embed});
 
 
-// Get your bot's secret token from:
-// https://discordapp.com/developers/applications/
-// Click on your application -> Bot -> Token -> "Click to Reveal Token"
-
-// KEY IS IN CONFIG.JSON, .gitignore
 
 
-client.login(token)
+//     module.exports.run = async (arguments, message, args) => {
+
+    
+//         });   
+
+
+//     }
+
+
+//     message.channel.send(
+//         "Server Time: " + nbTimer.serverTime +
+//         "\n" +
+//         "Nanban Time: " + nbTimer.updateTime +
+//         "\n" +
+//         "Next Nanban Time: " + nbTimer.nbTime
+//     )
+// }
+
+// // set updateTime to current time
+// function setTime(message) {
+//     updateSetTime()
+//     let newTime = data.serverTime
+//     data.updateTime.push(newTime)
+//     message.channel.send(
+//         "Nanban Time updated to: " + data.updateTime.format('MMMM Do YYYY, h:mm:ss a')
+//     )
+// }
+
+// // function to change updateTime to serverTime
+// function updateSetTime() {
+    
+// }
+
+// // add minutes to updateTime
+// function addTime(arguments, message) {
+//     let newTime = data.updateTime.add(arguments, "minutes").calendar()
+//     data.updateTime.push(newTime)
+
+//     message.channel.send(
+//         "New Nanban time: " + nbTimer.updateTime +
+//         "\n" +
+//         "Next Nanban Time: " + nbTimer.nbTime
+//     )
+// }
+
+// // subtract minutes from updateTime
+// function subtractTime(arguments, message) {
+//     let newTime = updateTime.subtract(arguments, "minutes").calendar()
+//     data.updateTime.push(newTime)
+
+//     message.channel.send(
+//         "New Nanban time: " + nbTimer.updateTime +
+//         "\n" +
+//         "Next Nanban Time: " + nbTimer.nbTime
+//     )
+// }
+
+// // ---------------------------------------------------------------------------------------
+
+
+
+
+// // Get your bot's secret token from:
+// // https://discordapp.com/developers/applications/
+// // Click on your application -> Bot -> Token -> "Click to Reveal Token"
+
+// // KEY IS IN CONFIG.JSON, .gitignore
+
+
+// client.login(token)
