@@ -6,9 +6,10 @@ const fs = require("fs")
 
 const moment = require('moment-timezone')
 
-const nbTimer = require("./data/nbTimer")
-const snekfetch = require("snekfetch");
-
+// const nbTimerData = fs.readFileSync("./data/nbTimer.json")
+// const nbTimer = JSON.parse(nbTimerData);
+// console.log(nbTimer)
+const nbTimer = require("./data/nbTimer.json")
 
 // -------------------------------------------------------------------------------------------------
 //                                       CLIENT
@@ -58,23 +59,18 @@ bot.on('ready', () => {
 bot.on('message', async message => {
     if (message.author.bot) return
     if (message.channel.type === "dm") return
-    
-    // let messageArray = message.content.split(/\s+/g)
-    // let command = messageArray[0]
-    // let args = messageArray.slice[1]
-
-    // if(!command.startsWith(prefix)) return
-
-    // let cmd = bot.commands.get(command.slice(prefix.length))
-    // if(cmd) cmd.run(bot, message, args);
-
 
     if (message.content.startsWith(prefix)) {
         wafflesCommand(message)
-        return
+        
     }
 })
- 
+
+
+
+
+
+
 // -------------------------------------------------------------------------------------------------
 //                                       LISTENER
 // -------------------------------------------------------------------------------------------------
@@ -141,9 +137,19 @@ function helpCommand(message) {
     message.channel.send({embed: embed})
 }
 
+
+// update the nbTimer JSON before everything
+function updateNbTimerJson() {
+    nbTimer.serverTime = JSON.stringify(moment().tz("America/Los_Angeles"))
+    if (moment(nbTimer.serverTime).isAfter(moment(nbTimer.nbTime))) {
+        nbTimer.updateTime = JSON.stringify(nbTimer.nbTime)
+        nbTimer.nbTime = JSON.stringify(moment(nbTimer.updateTime).add(7270,"seconds"))
+    }
+}
+
 // print nanban times
 function nbTimeCommand(arguments, message) {
-
+    updateNbTimerJson()
 
     let embed = new Discord.RichEmbed()
         .setAuthor("Waffles looks deep into the Nanban")
